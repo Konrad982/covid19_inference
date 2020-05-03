@@ -98,7 +98,7 @@ def plot_cases(
     week_interval=None,
     colors=("tab:blue", "tab:orange"),
     country="Germany",
-    what="cases",
+    what="confirmed cases",
 ):
     """
         Plots the new cases, the fit, forecast and lambda_t evolution
@@ -258,7 +258,7 @@ def plot_cases(
     )
 
     ax.set_xlabel("Date")
-    ax.set_ylabel(f"New confirmed {what} in {country}")
+    ax.set_ylabel(f"New {what} in {country}")
     ax.legend(loc="upper left")
     ax.set_ylim(0, ylim)
     func_format = lambda num, _: "${:.0f}\,$k".format(num / 1_000)
