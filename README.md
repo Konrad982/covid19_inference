@@ -1,3 +1,4 @@
+# Readme of the Priesemann Group Repository:
 # Bayesian inference and forecast of COVID-19, code repository
 
 [![Documentation Status](https://readthedocs.org/projects/covid19-inference/badge/?version=latest)](https://covid19-inference.readthedocs.io/en/latest/doc/gettingstarted.html)
@@ -18,6 +19,6 @@ https://www.ds.mpg.de/3568943/job_full_offer_14729553
 https://www.ds.mpg.de/3568926/job_full_offer_14729572
 https://www.ds.mpg.de/3568909/job_full_offer_14729591
 
-### Please take notice of our [disclaimer](DISCLAIMER.md).
+### Please take notice of the Priesemann Group's [disclaimer](DISCLAIMER.md), which is valid also for this repository.
 
 
