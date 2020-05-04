@@ -1,5 +1,5 @@
 # ------------------------------------------------------------------------------ #
-# Old plotting helpers that are still used by some of Jonas' examples
+# Old plotting helpers that are still used by some of Jonas' and Konrad's examples
 # moving to plot.py
 # ------------------------------------------------------------------------------ #
 
