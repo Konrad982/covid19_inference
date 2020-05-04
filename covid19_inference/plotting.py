@@ -12,6 +12,7 @@ import matplotlib.pyplot as plt
 
 log = logging.getLogger(__name__)
 
+
 def get_all_free_RVs_names(model):
     """
         Returns the names of all free parameters of the model
@@ -47,9 +48,18 @@ def get_prior_distribution(model, x, varname):
     return np.exp(model[varname].distribution.logp(x).eval())
 
 
-def plot_hist(model, trace, ax, varname, colors=("tab:blue", "tab:orange"), bins=50):
+def plot_hist(
+    model,
+    trace,
+    ax,
+    varname,
+    colors=("tab:blue", "tab:orange"),
+    bins=50,
+    lambda_exp=False,
+    lims=(0.025, 0.95),
+):
     """
-        Plots one histogram of the prior and posterior distribution of the variable varname.
+        Plots one histogram of the prior and posterior distribution of the variable varname (in case of lambda, non-logarithmic).
 
         Parameters
         ----------
@@ -65,26 +75,71 @@ def plot_hist(model, trace, ax, varname, colors=("tab:blue", "tab:orange"), bins
         -------
             None
     """
+    # check if the variable is one of the lambdas
+    if varname[0:6] == "lambda" and lambda_exp:
+        exponential = True
+        new_varname = varname[0:-4]
+        llim, ulim = lims
+        print(
+            "Warning: "
+            + new_varname
+            + " only between "
+            + str(llim)
+            + " and  "
+            + str(ulim)
+            + " quantiles"
+        )
+    else:
+        exponential = False
     if len(trace[varname].shape) >= 2:
         print("Dimension of {} larger than one, skipping".format(varname))
         ax.set_visible(False)
         return
-    ax.hist(trace[varname], bins=bins, density=True, color=colors[1], label="Posterior")
+    if exponential:
+        filtered = trace[varname][
+            np.logical_and(
+                np.quantile(trace[varname], llim) <= trace[varname],
+                trace[varname] <= np.quantile(trace[varname], ulim),
+            )
+        ]
+        ax.hist(
+            np.exp(filtered),
+            bins=bins,
+            density=True,
+            color=colors[1],
+            label="Posterior",
+        )
+    else:
+        ax.hist(
+            trace[varname], bins=bins, density=True, color=colors[1], label="Posterior"
+        )
     limits = ax.get_xlim()
     x = np.linspace(*limits, num=100)
     try:
-        ax.plot(
-            x,
-            get_prior_distribution(model, x, varname),
-            label="Prior",
-            color=colors[0],
-            linewidth=3,
-        )
+        if exponential:
+            ax.plot(
+                x,
+                get_prior_distribution(model, np.log(x), varname),
+                label="Prior",
+                color=colors[0],
+                linewidth=3,
+            )
+        else:
+            ax.plot(
+                x,
+                get_prior_distribution(model, x, varname),
+                label="Prior",
+                color=colors[0],
+                linewidth=3,
+            )
     except:
         pass
     ax.set_xlim(*limits)
     ax.set_ylabel("Density")
-    ax.set_xlabel(varname)
+    if exponential:
+        ax.set_xlabel(new_varname)
+    else:
+        ax.set_xlabel(varname)
 
 
 def plot_cases(
@@ -327,4 +382,3 @@ def plot_cases(
     plt.subplots_adjust(wspace=0.4, hspace=0.3)
 
     return fig, axes
-
