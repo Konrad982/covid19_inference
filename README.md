@@ -1,3 +1,6 @@
+# Readme
+This is a fork of [this repository](https://github.com/Priesemann-Group/covid19_inference). It aims to apply the model to different datasets (e.g. from the Johns Hopkins University and national authorities) from different countries. Chosen growth phases for countries other than Germany reflect my personal opinions and there is NO liability for the correctness of the data or of the statistical analysis.
+
 # Readme of the Priesemann Group Repository:
 # Bayesian inference and forecast of COVID-19, code repository
 
