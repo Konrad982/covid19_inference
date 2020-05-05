@@ -154,6 +154,7 @@ def plot_cases(
     colors=("tab:blue", "tab:orange"),
     country="Germany",
     what="confirmed cases",
+    big=False
 ):
     """
         Plots the new cases, the fit, forecast and lambda_t evolution
@@ -201,6 +202,9 @@ def plot_cases(
     start_date_mpl, end_date_mpl = matplotlib.dates.date2num(
         [start_date_plot, end_date_plot]
     )
+    start_date_alternative_mpl = matplotlib.dates.date2num(date_begin_sim)
+    end_date_data = start_date_plot + datetime.timedelta(num_days_data)
+    end_date_data_mpl = matplotlib.dates.date2num(end_date_data)
 
     if week_interval is None:
         week_inter_left = int(np.ceil(num_days_data / 7 / 5))
@@ -209,14 +213,24 @@ def plot_cases(
         week_inter_left = week_interval
         week_inter_right = week_interval
 
-    fig, axes = plt.subplots(
-        2,
-        2,
-        figsize=(9, 5),
-        gridspec_kw={"height_ratios": [1, 3], "width_ratios": [2, 3]},
-    )
-
-    ax = axes[1][0]
+    if big:
+        fig, axes = plt.subplots(
+            3,
+            1,
+            figsize=(9, 18),
+            gridspec_kw={"height_ratios": [3, 3, 1]},
+        )
+    else:
+        fig, axes = plt.subplots(
+            2,
+            2,
+            figsize=(9, 5),
+            gridspec_kw={"height_ratios": [1, 3], "width_ratios": [2, 3]},
+        )
+    if big:
+        ax = axes[0]
+    else:
+        ax = axes[1][0]
     time_arr = np.arange(-len(new_cases_obs), 0)
     mpl_dates = conv_time_to_mpl_dates(time_arr) + diff_data_sim + num_days_data
     ax.plot(
@@ -255,7 +269,10 @@ def plot_cases(
     ax.xaxis.set_major_formatter(matplotlib.dates.DateFormatter("%m/%d"))
     ax.set_xlim(start_date_mpl)
 
-    ax = axes[1][1]
+    if big:
+        ax = axes[1]
+    else:
+        ax = axes[1][1]
 
     time1 = np.arange(-len(new_cases_obs), 0)
     mpl_dates = conv_time_to_mpl_dates(time1) + diff_data_sim + num_days_data
@@ -327,12 +344,16 @@ def plot_cases(
     ax.xaxis.set_minor_locator(matplotlib.dates.DayLocator())
     ax.xaxis.set_major_formatter(matplotlib.dates.DateFormatter("%m/%d"))
 
-    ax = axes[0][1]
+    if big:
+        ax = axes[2]
+    else:
+        ax = axes[0][1]
 
     time = np.arange(-diff_to_0, -diff_to_0 + len_sim)
     lambda_t = trace["lambda_t"][:, :]
     μ = trace["mu"][:, None]
     mpl_dates = conv_time_to_mpl_dates(time) + diff_data_sim + num_days_data
+    #mpl_dates = conv_time_to_mpl_dates(time) + num_days_data
 
     ax.plot(mpl_dates, np.median(lambda_t - μ, axis=0), color=colors[1], linewidth=2)
     ax.fill_between(
@@ -347,19 +368,13 @@ def plot_cases(
 
     # ax.set_ylim(-0.15, 0.45)
     ylims = ax.get_ylim()
-    ax.hlines(0, start_date_mpl, end_date_mpl, linestyles=":")
+    ylims = (min([ylims[0], -0.15]), ylims[1])
+    ax.hlines(0, start_date_alternative_mpl, end_date_mpl, linestyles=":")
     delay = matplotlib.dates.date2num(date_data_end) - np.percentile(
         trace["delay"], q=75
     )
     ax.vlines(delay, ylims[0], ylims[1], linestyles="-", colors=["tab:red"])
     ax.set_ylim(*ylims)
-    ax.text(
-        delay + 0.5,
-        ylims[1] - 0.04 * np.diff(ylims),
-        "unconstrained because\nof reporting delay",
-        color="tab:red",
-        verticalalignment="top",
-    )
     ax.text(
         delay - 0.5,
         ylims[1] - 0.04 * np.diff(ylims),
@@ -368,6 +383,20 @@ def plot_cases(
         horizontalalignment="right",
         verticalalignment="top",
     )
+    ax.vlines([start_date_mpl, end_date_data_mpl], ylims[0], ylims[1], linestyles="-")
+    ax.text(
+        delay + 0.5,
+        ylims[1] - 0.04 * np.diff(ylims),
+        "unconstrained because\nof reporting delay",
+        color="tab:red",
+        verticalalignment="top",
+    )
+    ax.text(
+        start_date_mpl + 0.5,
+        ylims[0] + 0.04 * np.diff(ylims),
+        "data was available \nbetween the black vertical lines",
+        verticalalignment="bottom",
+    )
     ax.xaxis.set_major_locator(
         matplotlib.dates.WeekdayLocator(
             interval=week_inter_right, byweekday=matplotlib.dates.SU
@@ -375,9 +404,10 @@ def plot_cases(
     )
     ax.xaxis.set_minor_locator(matplotlib.dates.DayLocator())
     ax.xaxis.set_major_formatter(matplotlib.dates.DateFormatter("%m/%d"))
-    ax.set_xlim(start_date_mpl, end_date_mpl)
+    ax.set_xlim(start_date_alternative_mpl, end_date_mpl)
 
-    axes[0][0].set_visible(False)
+    if not big:
+        axes[0][0].set_visible(False)
 
     plt.subplots_adjust(wspace=0.4, hspace=0.3)
 
