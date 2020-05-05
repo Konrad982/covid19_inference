@@ -154,7 +154,7 @@ def plot_cases(
     colors=("tab:blue", "tab:orange"),
     country="Germany",
     what="confirmed cases",
-    big=False
+    big=False,
 ):
     """
         Plots the new cases, the fit, forecast and lambda_t evolution
@@ -215,10 +215,7 @@ def plot_cases(
 
     if big:
         fig, axes = plt.subplots(
-            3,
-            1,
-            figsize=(9, 18),
-            gridspec_kw={"height_ratios": [3, 3, 1]},
+            3, 1, figsize=(9, 18), gridspec_kw={"height_ratios": [3, 3, 1]},
         )
     else:
         fig, axes = plt.subplots(
@@ -353,7 +350,7 @@ def plot_cases(
     lambda_t = trace["lambda_t"][:, :]
     μ = trace["mu"][:, None]
     mpl_dates = conv_time_to_mpl_dates(time) + diff_data_sim + num_days_data
-    #mpl_dates = conv_time_to_mpl_dates(time) + num_days_data
+    # mpl_dates = conv_time_to_mpl_dates(time) + num_days_data
 
     ax.plot(mpl_dates, np.median(lambda_t - μ, axis=0), color=colors[1], linewidth=2)
     ax.fill_between(
