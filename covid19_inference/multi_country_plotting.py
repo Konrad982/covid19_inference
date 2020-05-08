@@ -64,11 +64,19 @@ def boxplots_around_lockdown_one_country(country, distance=5):
         diff[1] = ld_num + distance
         if len(datasets) <= 2:
             ax = axes[i]
+            plt.sca(ax)
         else:
             ax = axes[int(np.floor(i / 2))][i % 2]
+            plt.sca(ax)
         ax.boxplot(lambda_t[datasets[i]].to_numpy()[:, diff])
 
-        datetime.datetime.strptime(lddate, "%Y-%m-%d") + datetime.timedelta
+        first_date = (datetime.datetime.strptime(lddate, "%Y-%m-%d") - datetime.timedelta(days=5)).strftime("%d/%m/%Y")
+        second_date = (datetime.datetime.strptime(lddate, "%Y-%m-%d") + datetime.timedelta(days=5)).strftime("%d/%m/%Y")
+        plt.xticks([1,2], [first_date, second_date])
+        plt.title(datasets[i] + " dataset")
+        plt.xlabel("date")
+        plt.ylabel("boxplot of lambda, black line for mu")
+        
         mu = mu_all[datasets[i]].to_numpy()
         xlims = ax.get_xlim()
         ax.hlines(np.median(mu), xlims[0], xlims[1], linestyle="-")
@@ -81,4 +89,4 @@ def boxplots_around_lockdown_one_country(country, distance=5):
         else:
             ax = axes[int(np.floor(i / 2))][i % 2]
         ax.set_ylim((min(y_low_lim), max(y_up_lim)))
-    return axes
+    return
