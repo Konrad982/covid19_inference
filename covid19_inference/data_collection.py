@@ -3,7 +3,15 @@ import numpy as np
 import os
 from covid19_inference import plotting
 
-def update_collection(country, dataset="unknown", trace=None,varnames=None, change_points=None, other_vars=None):
+
+def update_collection(
+    country,
+    dataset="unknown",
+    trace=None,
+    varnames=None,
+    change_points=None,
+    other_vars=None,
+):
     """
     Saves the given data into a directory
     
@@ -30,39 +38,39 @@ def update_collection(country, dataset="unknown", trace=None,varnames=None, chan
     except FileNotFoundError:
         os.mkdir("results_collection")
         os.chdir("results_collection")
-    
+
     try:
         os.chdir(country)
     except FileNotFoundError:
         os.mkdir(country)
         os.chdir(country)
-        
+
     try:
         os.chdir(dataset)
     except FileNotFoundError:
         os.mkdir(dataset)
         os.chdir(dataset)
-        
+
     for varname in varnames:
         try:
             df = pd.DataFrame(trace[str(varname)])
         except:
             print("variable not found in trace")
         try:
-            f= open(str(varname),"w+")
+            f = open(str(varname), "w+")
             f.write(df.to_csv(index=False))
             f.close()
         except TypeError:
             print("bad varname format, nothing written")
-    
+
     try:
-        df = pd.DataFrame(other_vars, index = [0])
+        df = pd.DataFrame(other_vars, index=[0])
         f = open("other_vars", "w+")
         f.write(df.to_csv(index=False))
         f.close()
     except TypeError:
         print("other_vars not a dictionary")
-    
+
     try:
         df = pd.DataFrame(change_points)
         f = open("change_points", "w+")
@@ -70,27 +78,28 @@ def update_collection(country, dataset="unknown", trace=None,varnames=None, chan
         f.close()
     except TypeError:
         print("change_points not a dictionary or index not found")
-    
+
     os.chdir("..")
     os.chdir("..")
     os.chdir("..")
-    
+
     return
-    
+
+
 def read_variable(country, dataset, variable):
     try:
         os.chdir("results_collection")
     except FileNotFoundError:
         print("Collection not found")
         return
-    
+
     try:
         os.chdir(country)
     except FileNotFoundError:
         print("Country not found")
         os.chdir("..")
         return
-    
+
     try:
         os.chdir(dataset)
     except FileNotFoundError:
@@ -98,18 +107,19 @@ def read_variable(country, dataset, variable):
         os.chdir("..")
         os.chdir("..")
         return
-        
+
     try:
         df = pd.read_csv(variable)
-        
+
     except FileNotFoundError:
         print("variable not found")
         df = None
-        
+
     os.chdir("..")
     os.chdir("..")
     os.chdir("..")
     return df
+
 
 def read_variable_country(country, variable):
     try:
@@ -117,22 +127,20 @@ def read_variable_country(country, variable):
     except FileNotFoundError:
         print("Collection not found")
         return
-    
+
     try:
         os.chdir(country)
     except FileNotFoundError:
         print("Country not found")
         os.chdir("..")
         return
-    
+
     datasets = os.listdir()
     os.chdir("..")
     os.chdir("..")
 
-    
     dfdict = {}
     for dataset in datasets:
         dfdict[dataset] = read_variable(country, dataset, variable)
-    
+
     return dfdict
-    
