@@ -126,12 +126,13 @@ class Cov19Model(Model):
         # [data_begin, data_end]
         # (data_end - data_begin).days = 2
 
-        self.data_begin = data_begin
-        self.sim_begin = self.data_begin - datetime.timedelta(days=diff_data_sim)
-        self.data_end = self.data_begin + datetime.timedelta(
+        # assign properties
+        self._data_begin = data_begin
+        self._sim_begin = self.data_begin - datetime.timedelta(days=diff_data_sim)
+        self._data_end = self.data_begin + datetime.timedelta(
             days=len(new_cases_obs) - 1
         )
-        self.sim_end = self.data_end + datetime.timedelta(days=fcast_len)
+        self._sim_end = self.data_end + datetime.timedelta(days=fcast_len)
 
         # totel length of simulation, get later via the shape
         sim_len = len(new_cases_obs) + diff_data_sim + fcast_len
@@ -152,30 +153,79 @@ class Cov19Model(Model):
                 + "Are you traveling faster than light?"
             )
 
-    # helper properties
+    """
+    Properties
+    ----------
+    Useful properties, mainly used by the plot module.
+    """
+
+    """
+        Utility properties
+    """
+
     @property
-    def diff_data_sim(self):
-        return (self.data_begin - self.sim_begin).days
+    def shape_num_regions(self):
+        # Number of regions as tuple of int
+        return () if self.sim_ndim == 1 else self.sim_shape[1]
+
+    """
+        Forecast properties
+    """
 
     @property
     def fcast_begin(self):
+        # Returns date on which the forecast starts i.e. the day after the data ends
         return self.data_end + datetime.timedelta(days=1)
 
     @property
     def fcast_end(self):
+        # Returns date on which the simulation and the forecast end
         return self.sim_end
 
     @property
     def fcast_len(self):
+        # Returns the length of the forecast in days
         return (self.sim_end - self.data_end).days
+
+    """
+        Data properties
+    """
 
     @property
     def data_len(self):
         return self.new_cases_obs.shape[0]
 
     @property
+    def data_dim(self):
+        return self.new_cases_obs.shape[1]
+
+    @property
+    def data_begin(self):
+        return self._data_begin
+
+    @property
+    def data_end(self):
+        return self._data_end
+
+    """
+        Simulation properties
+    """
+
+    @property
     def sim_len(self):
         return self.sim_shape[0]
+
+    @property
+    def sim_begin(self):
+        return self._sim_begin
+
+    @property
+    def sim_end(self):
+        return self._sim_end
+
+    @property
+    def diff_data_sim(self):
+        return (self.data_begin - self.sim_begin).days
 
 
 def modelcontext(model):
@@ -204,6 +254,7 @@ def student_t_likelihood(
         The likelihood follows:
 
         .. math::
+
             P(\text{data\_obs}) &\sim StudentT(\text{mu} = \text{new\_cases\_inferred}, sigma =\sigma,
             \text{nu} = \text{nu})\\
             \sigma &= \sigma_r \sqrt{\text{new\_cases\_inferred} + \text{offset\_sigma}}
@@ -253,12 +304,6 @@ def student_t_likelihood(
             Journal of the American Statistical Association,
             84(408), 881-896. doi:10.2307/2290063
 
-        TODO
-        ----
-        #@jonas, can we make it more clear that this whole stuff gets attached to the
-        # model? like the with model as context...
-        #@jonas doc description for sigma parameters
-
     """
 
     model = modelcontext(model)
@@ -282,13 +327,7 @@ def student_t_likelihood(
 
 
 def SIR(
-    lambda_t_log,
-    pr_beta_I_begin=100,
-    pr_median_mu=1 / 8,
-    pr_sigma_mu=0.2,
-    model=None,
-    return_all=False,
-    save_all=False,
+    lambda_t_log, mu, pr_I_begin=100, model=None, return_all=False, save_all=False,
 ):
     r"""
         Implements the susceptible-infected-recovered model.
@@ -309,7 +348,11 @@ def SIR(
             time series of the logarithm of the spreading rate, 1 or 2-dimensional. If 2-dimensional the first
             dimension is time.
 
-        pr_beta_I_begin : float or array_like
+        mu : :class:`~theano.tensor.TensorVariable`
+            the recovery rate :math:`\mu`, typically a random variable. Can be 0 or 1-dimensional. If 1-dimensional,
+            the dimension are the different regions.
+
+        pr_I_begin : float or array_like or :class:`~theano.tensor.TensorVariable`
             Prior beta of the Half-Cauchy distribution of :math:`I(0)`.
 
         pr_median_mu : float or array_like
@@ -339,9 +382,6 @@ def SIR(
     """
     model = modelcontext(model)
 
-    # Build prior distributions:
-    mu = pm.Lognormal(name="mu", mu=np.log(pr_median_mu), sigma=pr_sigma_mu)
-
     # Total number of people in population
     N = model.N_population
 
@@ -349,7 +389,11 @@ def SIR(
     num_regions = () if model.sim_ndim == 1 else model.sim_shape[1]
 
     # Prior distributions of starting populations (infectious, susceptibles)
-    I_begin = pm.HalfCauchy(name="I_begin", beta=pr_beta_I_begin, shape=num_regions)
+    if isinstance(pr_I_begin, tt.TensorVariable):
+        I_begin = pr_I_begin
+    else:
+        I_begin = pm.HalfCauchy(name="I_begin", beta=pr_I_begin, shape=num_regions)
+
     S_begin = N - I_begin
 
     lambda_t = tt.exp(lambda_t_log)
@@ -360,7 +404,7 @@ def SIR(
         new_I_t = lambda_t / N * I_t * S_t
         S_t = S_t - new_I_t
         I_t = I_t + new_I_t - mu * I_t
-        I_t = tt.clip(I_t, 0, N)  # for stability
+        I_t = tt.clip(I_t, -1, N)  # for stability
         S_t = tt.clip(S_t, 0, N)
         return S_t, I_t, new_I_t
 
@@ -500,10 +544,12 @@ def SEIR(
     # Prior distributions of starting populations (exposed, infectious, susceptibles)
     # We choose to consider the transitions of newly exposed people of the last 10 days.
     if num_regions == ():
-        new_E_begin = pm.HalfCauchy(name="E_begin", beta=pr_beta_new_E_begin, shape=11)
+        new_E_begin = pm.HalfCauchy(
+            name="new_E_begin", beta=pr_beta_new_E_begin, shape=11
+        )
     else:
         new_E_begin = pm.HalfCauchy(
-            name="E_begin", beta=pr_beta_new_E_begin, shape=(11, num_regions)
+            name="new_E_begin", beta=pr_beta_new_E_begin, shape=(11, num_regions)
         )
     I_begin = pm.HalfCauchy(name="I_begin", beta=pr_beta_I_begin, shape=num_regions)
     S_begin = N - I_begin - pm.math.sum(new_E_begin, axis=0)
@@ -715,27 +761,53 @@ def delay_cases(
 
 
 def week_modulation(
-    new_cases_inferred,
+    new_cases_raw,
     week_modulation_type="abs_sine",
-    pr_mean_weekend_factor=0.7,
-    pr_sigma_weekend_factor=0.2,
+    pr_mean_weekend_factor=0.3,
+    pr_sigma_weekend_factor=0.5,
     week_end_days=(6, 7),
     model=None,
     save_in_trace=True,
 ):
-    """
+    r"""
+    Adds a weekly modulation of the number of new cases:
+
+    .. math::
+        \text{new\_cases} &= \text{new\_cases\_raw} \cdot (1-f(t))\,, \qquad\text{with}\\
+        f(t) &= f_w \cdot \left(1 - \left|\sin\left(\frac{\pi}{7} t- \frac{1}{2}\Phi_w\right)\right| \right),
+
+    if ``week_modulation_type`` is ``"abs_sine"`` (the default). If ``week_modulation_type`` is ``"step"``, the
+    new cases are simply multiplied by the weekend factor on the days set by ``week_end_days``
+
+    The weekend factor :math:`f_w` follows a Lognormal distribution with
+    median ``pr_mean_weekend_factor`` and sigma ``pr_sigma_weekend_factor``. It is hierarchically constructed if
+    the input is two-dimensional by the function :func:`hierarchical_normal` with default arguments.
+
+    The offset from Sunday :math:`\Phi_w` follows a flat :class:`~pymc3.distributions.continuous.VonMises` distribution
+    and is the same for all regions.
 
     Parameters
     ----------
-    new_cases_inferred
-    week_modulation_type
-    pr_mean_weekend_factor
-    pr_sigma_weekend_factor
-    week_end_days
-    model
+
+    new_cases_raw : :class:`~theano.tensor.TensorVariable`
+        The input array, can be one- or two-dimensional
+    week_modulation_type : str
+        The type of modulation, accepts ``"step"`` or  ``"abs_sine`` (the default).
+    pr_mean_weekend_factor : float
+        Sets the prior mean of the factor :math:`f_w` by which weekends are counted.
+    pr_sigma_weekend_factor : float
+        Sets the prior sigma of the factor :math:`f_w` by which weekends are counted.
+    week_end_days : tuple of ints
+        The days counted as weekend if ``week_modulation_type`` is ``"step"``
+    model : :class:`Cov19Model`
+        if none, it is retrieved from the context
+    save_in_trace : bool
+        If True (default) the new_cases are saved in the trace.
 
     Returns
     -------
+
+    new_cases : :class:`~theano.tensor.TensorVariable`
 
     """
     model = modelcontext(model)
@@ -744,13 +816,23 @@ def week_modulation(
 
     len_L2 = () if model.sim_ndim == 1 else model.sim_shape[1]
 
-    week_end_factor, _ = hierarchical_normal(
-        "weekend_factor",
+    week_end_factor_L2_log, week_end_factor_L1_log = hierarchical_normal(
+        "weekend_factor_log",
         "sigma_weekend_factor",
-        pr_mean=pr_mean_weekend_factor,
+        pr_mean=tt.log(pr_mean_weekend_factor),
         pr_sigma=pr_sigma_weekend_factor,
         len_L2=len_L2,
     )
+
+    week_end_factor_L2 = tt.exp(week_end_factor_L2_log)
+
+    if model.sim_ndim == 1:
+        pm.Deterministic("weekend_factor", week_end_factor_L2)
+    elif model.sim_ndim == 2:
+        week_end_factor_L1 = tt.exp(week_end_factor_L1_log)
+        pm.Deterministic("weekend_factor_L2", week_end_factor_L2)
+        pm.Deterministic("weekend_factor_L1", week_end_factor_L1)
+
     if week_modulation_type == "step":
         modulation = np.zeros(shape_modulation[0])
         for i in range(shape_modulation[0]):
@@ -766,8 +848,10 @@ def week_modulation(
     if model.sim_ndim == 2:
         modulation = tt.shape_padaxis(modulation, axis=-1)
 
-    multiplication_vec = np.ones(shape_modulation) - (1 - week_end_factor) * modulation
-    new_cases_inferred_eff = new_cases_inferred * multiplication_vec
+    multiplication_vec = tt.abs_(
+        np.ones(shape_modulation) - week_end_factor_L2 * modulation
+    )
+    new_cases_inferred_eff = new_cases_raw * multiplication_vec
     if save_in_trace:
         pm.Deterministic("new_cases", new_cases_inferred_eff)
     return new_cases_inferred_eff
@@ -826,10 +910,14 @@ def make_change_point_RVs(
 
     lambda_log_list.append(lambda_0_L2_log)
     for i, cp in enumerate(change_points_list):
+        if cp["pr_median_lambda"] == "previous":
+            pr_sigma_lambda = lambda_log_list[-1]
+        else:
+            pr_sigma_lambda = np.log(cp["pr_median_lambda"])
         lambda_cp_L2_log, lambda_cp_L1_log = hierarchical_normal(
             f"lambda_{i + 1}_log",
             f"sigma_lambda_{i + 1}",
-            np.log(cp["pr_median_lambda"]),
+            pr_sigma_lambda,
             cp["pr_sigma_lambda"],
             len_L2,
             w=0.7,
@@ -894,7 +982,8 @@ def lambda_t_with_sigmoids(
     change_points_list
     pr_median_lambda_0
     pr_sigma_lambda_0
-    model
+    model : :class:`Cov19Model`
+        if none, it is retrieved from the context
 
     Returns
     -------
@@ -955,7 +1044,7 @@ def hierarchical_normal(
         y_{i, \text{L2}} &= Normal(x_\text{L1}, \sigma_\text{L2})\\
         \sigma_\text{L2} &= HalfCauchy(\text{error\_fact} \cdot \text{pr\_sigma})
 
-    It is however implemented in a non-central way, that the second line is changed to:
+    It is however implemented in a non-centered way, that the second line is changed to:
 
      .. math::
 
@@ -966,10 +1055,10 @@ def hierarchical_normal(
 
     Parameters
     ----------
-    name : basestring
+    name : str
         Name under which :math:`x_\text{L1}` and :math:`y_\text{L2}` saved in the trace. ``'_L1'`` and ``'_L2'``
         is appended
-    name_sigma : basestring
+    name_sigma : str
         Name under which :math:`\sigma_\text{L2}` saved in the trace. ``'_L2'`` is appended.
     pr_mean : float
         Prior mean of :math:`x_\text{L1}`
@@ -988,11 +1077,6 @@ def hierarchical_normal(
         the random variable :math:`y_\text{L2}`
     x : :class:`~theano.tensor.TensorVariable`
         the random variable :math:`x_\text{L1}`
-
-    Todo
-    ----
-    Think about the sigma prior, whether one should model it hierarchically:
-    https://projecteuclid.org/download/pdf_1/euclid.ba/1340371048 section 6
 
     """
     if not len_L2:  # not hierarchical
@@ -1014,6 +1098,54 @@ def hierarchical_normal(
         pm.Deterministic(name + "_L2", Y)
 
     return Y, X
+
+
+def make_prior_I(
+    lambda_t_log,
+    mu,
+    pr_median_delay,
+    pr_sigma_I_begin=2,
+    n_data_points_used=5,
+    model=None,
+):
+    """
+    Builds the prior for I begin  by solving the SIR differential from the first data backwards. This decorrelates the
+    I_begin from the lambda_t at the beginning, allowing a more efficient sampling. The example_one_bundesland runs
+    about 30\% faster with this prior, instead of a HalfCauchy.
+
+    Parameters
+    ----------
+    lambda_t_log : :class:`~theano.tensor.TensorVariable`
+    mu : :class:`~theano.tensor.TensorVariable`
+    pr_median_delay : float
+    pr_sigma_I_begin : float
+    n_data_points_used : int
+    model : :class:`Cov19Model`
+        if none, it is retrieved from the context
+
+    Returns
+    -------
+    I_begin: :class:`~theano.tensor.TensorVariable`
+
+    """
+    model = modelcontext(model)
+
+    num_regions = () if model.sim_ndim == 1 else model.sim_shape[1]
+
+    lambda_t = tt.exp(lambda_t_log)
+
+    delay = round(pr_median_delay)
+    num_new_I_ref = np.mean(model.new_cases_obs[:n_data_points_used], axis=0)
+    days_diff = model.diff_data_sim - delay + 3
+    I_ref = num_new_I_ref / lambda_t[days_diff]
+    I0_ref = I_ref / (1 + lambda_t[days_diff // 2] - mu) ** days_diff
+    I_begin = I0_ref * tt.exp(
+        pm.Normal(
+            name="I_begin_ratio_log", mu=0, sigma=pr_sigma_I_begin, shape=num_regions
+        )
+    )
+    pm.Deterministic("I_begin", I_begin)
+    return I_begin
 
 
 def hierarchical_beta(name, name_sigma, pr_mean, pr_sigma, len_L2):
