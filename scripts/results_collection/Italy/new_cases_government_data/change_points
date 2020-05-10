@@ -1,0 +1,7 @@
+pr_mean_date_transient,pr_sigma_date_transient,pr_median_lambda,pr_sigma_lambda,pr_median_transient_len,pr_sigma_transient_len
+2020-02-22,6,0.3,1,4,0.5
+2020-03-01,6,0.2,1,4,0.5
+2020-03-08,3,0.125,1,4,0.5
+2020-03-10,3,0.08333333333333333,1,4,0.5
+2020-03-21,6,0.0625,1,4,0.5
+2020-04-10,6,0.07142857142857142,1,4,0.5
