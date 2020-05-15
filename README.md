@@ -1,3 +1,4 @@
+[Link to comparison of different countries](scripts/Comparison.html)
 # Disclaimer
 This repository is a fork of [the Priesemann Group's Covid-19 inference repository](https://github.com/Priesemann-Group/covid19_inference). It aims to apply the model to different datasets (e.g. from the Johns Hopkins University and national authorities) from different countries. There is no liability for correctness of the data, the statistical inference methods or any visible results. Chosen changing points for countries other than Germany reflect my personal judging.
 
