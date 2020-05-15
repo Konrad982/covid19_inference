@@ -1,2 +1,2 @@
-bd,ed,diff_data_sim,num_days_forecast,lockdown_date,lockdown_type,tune,draws
-2020-03-03,2020-05-09,16,16,2020-03-17,school closures and home office recommandations,500,500
+bd,ed,diff_data_sim,num_days_forecast,lockdown_date,lockdown_type,tune,draws,data_retrieval
+2020-03-03,2020-05-14,16,16,2020-03-24,restaurant closures,500,500,15/05/2020 10:56
