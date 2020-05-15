@@ -144,3 +144,16 @@ def read_variable_country(country, variable):
         dfdict[dataset] = read_variable(country, dataset, variable)
 
     return dfdict
+
+
+def get_countries():
+    try:
+        os.chdir("results_collection")
+    except FileNotFoundError:
+        print("Collection not found")
+        return
+
+    countries = os.listdir()
+    os.chdir("..")
+
+    return countries
