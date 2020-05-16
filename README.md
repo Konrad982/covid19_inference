@@ -4,7 +4,7 @@ This repository is a fork of [the Priesemann Group's Covid-19 inference reposito
 
 # Copyright information on the data used
 Data which may be found in raw or processed form in this repository comes from
-- [data.gouv.fr](https://www.data.gouv.fr/en/datasets/donnees-hospitalieres-relatives-a-lepidemie-de-covid-19/#_), under the [open licence](https://www.etalab.gouv.fr/wp-content/uploads/2018/11/open-licence.pdf)
+- [data.gouv.fr hospitalisations](https://www.data.gouv.fr/en/datasets/donnees-hospitalieres-relatives-a-lepidemie-de-covid-19/#_) and [new positive tests in laboratoires de ville](https://www.data.gouv.fr/en/datasets/donnees-relatives-aux-tests-de-depistage-de-covid-19-realises-en-laboratoire-de-ville/#_), under the [open licence](https://www.etalab.gouv.fr/wp-content/uploads/2018/11/open-licence.pdf)
 - [Italian Government GitHub repository](https://github.com/pcm-dpc/COVID-19), under [CC-BY-4.0 licence](https://creativecommons.org/licenses/by/4.0/deed.en)
 - [Johns Hopkins University GitHub repository](https://github.com/CSSEGISandData/COVID-19) under the conditions specified there
 - [Robert Koch Institut](https://www.rki.de) data retrieved from [here](https://experience.arcgis.com/experience/478220a4c454480e823b17327b2bf1d4) under [Open Data Datenlizenz Deutschland – Namensnennung – Version 2.0](https://www.govdata.de/dl-de/by-2-0)

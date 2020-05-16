@@ -237,6 +237,19 @@ def plotly_violins_all_available_lambda(distances=5, around="lockdown", refdate=
                     + ldtype
                 )
                 printnew_gvt = True
+            elif datasets[i] == "new_lab":
+                name_0 = country + " new_lab " + date_0_string
+                name_1 = country + " new_lab " + date_1_string
+                md_table = (
+                    md_table
+                    + "|"
+                    + country
+                    + "|new_lab|"
+                    + lddate_normalstring
+                    + "|"
+                    + ldtype
+                )
+                printnew_lab = True
             else:
                 if datasets[i] == "JHU":
                     printJHU = True
@@ -304,7 +317,7 @@ def plotly_violins_all_available_lambda(distances=5, around="lockdown", refdate=
             # traces.append(go.Scatter(x=[current, current + 1], y=[mu, mu], legendgroup = name_1, mode="lines", line=dict(color="black")))
     display(Markdown(md_table))
     md_table = ""
-    if printJHU or printnew_gvt or printhosp:
+    if printJHU or printnew_gvt or printhosp or printnew_lab:
         md_table = "|Abbreviation|Meaning| \n|:---|:---|\n"
         if printJHU:
             md_table = md_table + "|JHU|Data from Johns Hopkins university|\n"
@@ -316,11 +329,16 @@ def plotly_violins_all_available_lambda(distances=5, around="lockdown", refdate=
         if printhosp:
             md_table = (
                 md_table
-                + "|hosp|New hospitalisations according to government data of the respective country|\n\n"
+                + "|hosp|New hospitalisations according to government data of the respective country|\n"
+            )
+        if printnew_lab:
+            md_table = (
+                md_table
+                + "|new_lab|France-specific, positive tests of a part of the laboratories (*laboratoires de ville*)|\n"
             )
 
     md_table = (
-        md_table + "For the links to the sources, see the readme of the repository.\n\n"
+        md_table + "\n For the links to the sources, see the readme of the repository.\n\n"
     )
     md_table = (
         md_table
